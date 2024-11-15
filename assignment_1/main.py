@@ -142,7 +142,6 @@ for c in range(0, C):
     xs = PC_1[c, :]
     ys = PC_2[c, :]
     colors = cond_color.get_colors(xs, ys)
-    print(colors[0])
     cond_color.plot_start(xs[0], ys[0], colors[0], markersize=200, ax=ax)
     cond_color.plot_end(xs[-1], ys[-1], colors[-1], markersize=50, ax=ax)
 
@@ -161,4 +160,52 @@ ax.set_xlabel('PC1')
 ax.set_ylabel('PC2')
 
 plt.savefig(f'outputs/pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='tight')
+
+####################################################################################################
+# Computing log-likelihood of a linear model
+
+
+# Testing the H formula
+A = np.array([
+    [0, 2, 3, 4],
+    [-2, 0, 7, 8],
+    [-3, -7, 0, 12],
+    [-4, -8, -12, 0]
+])
+
+def compute_K(A):
+    return int((A.shape[0] - 1)*(A.shape[0])/2)
+
+K = compute_K(A)
+
+def compute_beta_and_H(A):
+    beta = np.zeros(shape=K)
+
+    # Loop through every element
+    cur_index = 0
+    for i in range(A.shape[0]):  # Iterate over rows
+        for j in range(A.shape[1]):  # Iterate over columns
+            if(j > i):
+                beta[cur_index] = A[i, j]
+                cur_index += 1
+
+    H = np.zeros(shape=(beta.shape[0], A.shape[0], A.shape[1]))
+
+    for a in range(H.shape[0]):
+        for j in range(H.shape[2]):
+            for i in range(H.shape[1]):
+                if j > i and A[i, j] == beta[a]:
+                    H[a, i, j] = 1
+                elif j < i and A[j, i] == beta[a]:
+                    H[a, i, j] = -1
+                else:
+                    H[a, i, j] = 0
+    return beta, H
+
+beta, H = compute_beta_and_H(A)
+assert np.all(A==np.tensordot(beta, H, axes=1)), 'Equation 3 not satisfied.'
+
+
+
+
 
