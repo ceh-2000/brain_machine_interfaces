@@ -167,38 +167,59 @@ plt.savefig(f'outputs/pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='
 # Computing A in terms of beta and H
 M = 4
 A = np.array([
-    [0., 2., 3., 4.],
-    [-2., 0., 7., 8.],
-    [-3., -7., 0., 12.],
-    [-4., -8., -12., 0.]
-])
+    [0, 2, 3, 4],
+    [-2, 0, 7, 8],
+    [-3, -7, 0, 12],
+    [-4, -8, -12, 0]
+], dtype=np.float64)
 
 
 def compute_K(M):
     return int((M - 1) * (M) / 2)
 
-
 K = compute_K(M)
 
-
-def compute_A(beta, M, K):
+def construct_H(M, K):
     H = np.zeros(shape=(K, M, M))
 
-    for a in range(H.shape[0]):
-        for i in range(H.shape[1]):
-            for j in range(H.shape[2]):
-                print(j - i - 1)
-                if j > i and a == i + j:
-                    H[a, i, j] = 1
-                elif j < i and a == i + j:
-                    H[a, i, j] = -1
-                else:
-                    H[a, i, j] = 0
+    a = 0
+    i = 0
+    start_j = 1
 
-    return np.tensordot(beta, H, axes=1)
+    while a < K:
+        j = start_j
+        while j < M:
+            H[a, i, j] = 1
+            H[a, j, i] = -1
+            j += 1
+            a += 1
+        i += 1
+        start_j += 1
 
+    return H
 
 # Test our new function
-beta = np.array([2, 3, 4, 7, 8, 12])
-new_A = compute_A(beta, M, K)
+beta_test = np.array([2, 3, 4, 7, 8, 12], dtype=np.float64)
+
+H = construct_H(M, K)
+new_A = np.tensordot(beta_test, H, axes=1)
 assert np.all(A == new_A), 'Equation 3 not satisfied.'
+
+# TODO: Start here using equation 4 to construct W!
+def construct_W(H, Z, W_shape):
+    W = np.zeros(shape=W_shape)
+
+
+
+
+# Now find beta from example Z data
+def compute_beta(full_Z):
+    M, C, T = full_Z.shape
+    Z_T = full_Z[:, :, :T-1]
+    Z_T_1 = full_Z[:, :, 1:T]
+    delta_Z = Z_T_1 - Z_T
+
+    assert delta_Z.shape == (M, C, T-1), 'Delta Z not of shape M x C x (T-1)'
+
+
+compute_beta(Z)
