@@ -9,7 +9,7 @@ from sklearn.decomposition import PCA
 import cond_color
 
 data = np.load('data/psths.npz')
-X, times = data['X'], data['times'] # N x C x T and T x 1
+X, times = data['X'], data['times']  # N x C x T and T x 1
 N, C, T = X.shape[0], X.shape[1], X.shape[2]
 
 # Trial average spike counts have been divided by the bin width, which is 10 ms
@@ -30,7 +30,7 @@ data_subset = X[:num_neurons, :, c]
 
 # Create the heatmap
 plt.figure(figsize=(10, 3))
-sns.heatmap(data_subset, yticklabels=range(1, num_neurons+1),
+sns.heatmap(data_subset, yticklabels=range(1, num_neurons + 1),
             cmap='viridis', cbar=True)
 
 # Customize the plot
@@ -59,7 +59,7 @@ plt.savefig(f'outputs/population_average_firing_rate.pdf', format='pdf', dpi=300
 ####################################################################################################
 # Plotting maximum firing rates of neurons across time and conditions (2a)
 
-X_max = np.max(X, axis=(1, 2)) # Maximum across conditions and time
+X_max = np.max(X, axis=(1, 2))  # Maximum across conditions and time
 
 plt.figure(figsize=(10, 3))
 
@@ -77,7 +77,7 @@ plt.savefig(f'outputs/neurons_maximum_firing_rates.pdf', format='pdf', dpi=300, 
 ####################################################################################################
 # Normalization (2a)
 
-X_min = np.min(X, axis = (1, 2)) # Minimum across conditions and time
+X_min = np.min(X, axis=(1, 2))  # Minimum across conditions and time
 
 X_min = X_min[:, np.newaxis, np.newaxis]
 X_max = X_max[:, np.newaxis, np.newaxis]
@@ -100,18 +100,18 @@ assert np.all(np.average(X, axis=1) < 0.0001), "Average across conditions exceed
 # Subset X on −150ms to +300ms
 mask = (times >= -150) & (times <= 300)
 X = X[:, :, mask]
-T = X.shape[2] # Now only 46 time bins for this reduced interval
+T = X.shape[2]  # Now only 46 time bins for this reduced interval
 
-assert X.shape == (N, C, T) # Ensure T redefined correctly
+assert X.shape == (N, C, T)  # Ensure T redefined correctly
 
 # Reshape to N x C*T
 X = X.reshape(N, C * T)
 
 # PCA from Equation 18 in Lecture Notes 2
-S = (1/(C*T))*np.matmul(X, X.T) # Sample covariance matrix
+S = (1 / (C * T)) * np.matmul(X, X.T)  # Sample covariance matrix
 assert S.shape == (N, N)
 
-M = 12 # Number of principal components
+M = 12  # Number of principal components
 
 eigenvalues, eigenvectors = np.linalg.eig(S)
 
@@ -136,7 +136,7 @@ assert PC_1.shape == (C, T)
 
 # Plot each condition as its own line and the time from PC_1 vs PC_2
 # Use cond_color
-fig, ax = plt.subplots(figsize=(10,4)) # Initialize figures and axes
+fig, ax = plt.subplots(figsize=(10, 4))  # Initialize figures and axes
 
 for c in range(0, C):
     xs = PC_1[c, :]
@@ -164,48 +164,41 @@ plt.savefig(f'outputs/pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='
 ####################################################################################################
 # Computing log-likelihood of a linear model
 
-
-# Testing the H formula
+# Computing A in terms of beta and H
+M = 4
 A = np.array([
-    [0, 2, 3, 4],
-    [-2, 0, 7, 8],
-    [-3, -7, 0, 12],
-    [-4, -8, -12, 0]
+    [0., 2., 3., 4.],
+    [-2., 0., 7., 8.],
+    [-3., -7., 0., 12.],
+    [-4., -8., -12., 0.]
 ])
 
-def compute_K(A):
-    return int((A.shape[0] - 1)*(A.shape[0])/2)
 
-K = compute_K(A)
+def compute_K(M):
+    return int((M - 1) * (M) / 2)
 
-def compute_beta_and_H(A):
-    beta = np.zeros(shape=K)
 
-    # Loop through every element
-    cur_index = 0
-    for i in range(A.shape[0]):  # Iterate over rows
-        for j in range(A.shape[1]):  # Iterate over columns
-            if(j > i):
-                beta[cur_index] = A[i, j]
-                cur_index += 1
+K = compute_K(M)
 
-    H = np.zeros(shape=(beta.shape[0], A.shape[0], A.shape[1]))
+
+def compute_A(beta, M, K):
+    H = np.zeros(shape=(K, M, M))
 
     for a in range(H.shape[0]):
-        for j in range(H.shape[2]):
-            for i in range(H.shape[1]):
-                if j > i and A[i, j] == beta[a]:
+        for i in range(H.shape[1]):
+            for j in range(H.shape[2]):
+                print(j - i - 1)
+                if j > i and a == i + j:
                     H[a, i, j] = 1
-                elif j < i and A[j, i] == beta[a]:
+                elif j < i and a == i + j:
                     H[a, i, j] = -1
                 else:
                     H[a, i, j] = 0
-    return beta, H
 
-beta, H = compute_beta_and_H(A)
-assert np.all(A==np.tensordot(beta, H, axes=1)), 'Equation 3 not satisfied.'
+    return np.tensordot(beta, H, axes=1)
 
 
-
-
-
+# Test our new function
+beta = np.array([2, 3, 4, 7, 8, 12])
+new_A = compute_A(beta, M, K)
+assert np.all(A == new_A), 'Equation 3 not satisfied.'
