@@ -1,11 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from matplotlib.collections import LineCollection
-
-import cond_color
 import utils
 
+# Assignment hyperparameters
+should_distort = False
+np.random.seed(0)
+
+# Data for assignment provided
 data = np.load('data/psths.npz')
 X, times = data['X'], data['times']  # N x C x T and T x 1
 N, C, T = X.shape[0], X.shape[1], X.shape[2]
@@ -94,6 +96,21 @@ X = X - X_avg_condition
 assert np.all(np.average(X, axis=1) < 0.0001), 'Average across conditions exceeds the threshold of 0.0001.'
 
 mean_centered_X = X  # Temporary variable to use to get mean-centered X later in question 6
+
+####################################################################################################
+# Control analysis via distorted data (7a)
+
+if should_distort:
+    # Get a fresh version of mean-centered X
+    X = mean_centered_X
+
+    random_condition_indices = np.random.choice(C, (C // 2,), replace=False)
+
+    t0 = np.where(times == -150)[0][0]
+
+    X[:, random_condition_indices, t0:T] = 2 * X[:, random_condition_indices, t0:(t0 + 1)] - X[:,
+                                                                                             random_condition_indices,
+                                                                                             t0:T]
 
 ####################################################################################################
 # PCA (2c)
@@ -276,11 +293,17 @@ P_FR, P_FR_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 0)
 
 fig, ax = utils.plot_2D_trajectories(P_FR_project[0], P_FR_project[1], C, 10)
 
-plt.title('Plot of trajectories projected into fasted 2D plane')
+if should_distort:
+    plt.title('Plot of trajectories projected into fastest 2D plane, distorted data')
+else:
+    plt.title('Plot of trajectories projected into fastest 2D plane')
 ax.set_xlabel('P_FR_1')
 ax.set_ylabel('P_FR_2')
 
-plt.savefig(f'outputs/traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_distort:
+    plt.savefig(f'outputs/DISTORTED_traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
+else:
+    plt.savefig(f'outputs/traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
 # Plot 2D trajectories in second and third fastest planes (5d)
@@ -338,3 +361,16 @@ ax.set_xlabel('P_1')
 ax.set_ylabel('P_2')
 
 plt.savefig(f'outputs/pre_movement_N_dim_proj_traj.pdf', format='pdf', dpi=300, bbox_inches='tight')
+
+####################################################################################################
+# Control analysis via distorted data (7a)
+
+# Get a fresh version of mean-centered X
+X = mean_centered_X
+
+random_condition_indices = np.random.choice(C, (C // 2,), replace=False)
+
+t0 = np.where(times == -150)[0][0]
+
+X[:, random_condition_indices, t0:T] = 2 * X[:, random_condition_indices, t0:(t0 + 1)] - X[:, random_condition_indices,
+                                                                                         t0:T]
