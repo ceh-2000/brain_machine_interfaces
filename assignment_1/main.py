@@ -1,10 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import sklearn
 from matplotlib.collections import LineCollection
-from scipy.cluster.vq import whiten
-from sklearn.decomposition import PCA
 
 import cond_color
 
@@ -162,7 +159,7 @@ ax.set_ylabel('PC2')
 plt.savefig(f'outputs/pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
-# Computing log-likelihood of a linear model
+# Computing log-likelihood of a linear model (4a, 4b, 4c)
 
 # Computing A in terms of beta and H
 M = 4
@@ -244,6 +241,9 @@ def compute_A(full_Z):
 A = compute_A(Z)
 print(A.shape)
 
+####################################################################################################
+# Color plot of A (4d)
+
 # Plot A
 plt.figure(figsize=(5, 5))
 plt.imshow(A, cmap='viridis')
@@ -257,4 +257,11 @@ plt.colorbar()
 plt.title("Absolute value color plot of A")
 plt.savefig(f'outputs/absolute_value_color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
+####################################################################################################
+# Test A calculation (4e)
+test_data = np.load('data/test.npz')
+Z_test, A_test = test_data['Z_test'], test_data['A_test']
+
+A_estimate = compute_A(Z_test)
+assert np.allclose(A_estimate, A_test), 'Our estimate of A and A_test do not match.'
 
