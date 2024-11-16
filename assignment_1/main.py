@@ -9,6 +9,7 @@ import utils
 data = np.load('data/psths.npz')
 X, times = data['X'], data['times']  # N x C x T and T x 1
 N, C, T = X.shape[0], X.shape[1], X.shape[2]
+print(f'N: {N}, C: {C}, T: {T}')
 
 # Trial average spike counts have been divided by the bin width, which is 10 ms
 # So, X[i, c, t] is the average firing rate of neuron i, in t'th time bin, in condition c
@@ -100,7 +101,7 @@ mask = (times >= -150) & (times <= 300)
 X = X[:, :, mask]
 T = X.shape[2]  # Now only 46 time bins for this reduced interval
 
-assert X.shape == (N, C, T)  # Ensure T redefined correctly
+assert X.shape == (N, C, T), 'Shape of X is wrong.'  # Ensure T redefined correctly
 
 # Reshape to N x C*T
 X = X.reshape(N, C * T)
@@ -217,13 +218,12 @@ def compute_A(full_Z):
 
     A = np.tensordot(beta, H, axes=1)
 
-    # Check that A is antisymmetric
+    assert A.shape == (M, M), f'A should have shape {M}x{M}.'
     assert np.allclose(A, -A.T), 'A is not antisymmetric.'
 
     return A
 
 A = compute_A(Z)
-print(A.shape)
 
 ####################################################################################################
 # Color plot of A (4d)
@@ -260,12 +260,12 @@ assert np.allclose(eigenvalues[0::2], np.conj(eigenvalues[1::2])), 'Adjacent eig
 ####################################################################################################
 # Project Z in plane with fastest rotation (P_FR) (5b)
 
-FR_P_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 0)
+P_FR, P_FR_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 0)
 
 ####################################################################################################
 # Plot 2D trajectories in fastest plane (5c)
 
-fig, ax = utils.plot_2D_trajectories(FR_P_project[0], FR_P_project[1], C, 10)
+fig, ax = utils.plot_2D_trajectories(P_FR_project[0], P_FR_project[1], C, 10)
 
 plt.title('Plot of trajectories projected into fasted 2D plane')
 ax.set_xlabel('P_FR_1')
@@ -277,9 +277,9 @@ plt.savefig(f'outputs/traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=30
 # Plot 2D trajectories in second and third fastest planes (5d)
 
 # Second fastest
-P_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 1)
+_, P_project_2nd = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 1)
 
-fig, ax = utils.plot_2D_trajectories(P_project[0], P_project[1], C, 10)
+fig, ax = utils.plot_2D_trajectories(P_project_2nd[0], P_project_2nd[1], C, 10)
 
 plt.title('Plot of trajectories projected into second fastest 2D plane')
 ax.set_xlabel('P_1')
@@ -288,9 +288,9 @@ ax.set_ylabel('P_2')
 plt.savefig(f'outputs/traj_projected_second_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 # Third fastest
-P_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 2)
+_, P_project_3rd = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 2)
 
-fig, ax = utils.plot_2D_trajectories(P_project[0], P_project[1], C, 10)
+fig, ax = utils.plot_2D_trajectories(P_project_3rd[0], P_project_3rd[1], C, 10)
 
 plt.title('Plot of trajectories projected into third fastest 2D plane')
 ax.set_xlabel('P_1')
@@ -298,3 +298,23 @@ ax.set_ylabel('P_2')
 
 plt.savefig(f'outputs/traj_projected_third_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
+####################################################################################################
+# Apply the projections obtained for the interval [-150ms, 300ms] to the interval [-800ms, -150ms] (6)
+
+P_FR_V_M_T = np.matmul(P_FR, V_M.T)
+
+assert P_FR_V_M_T.shape == (2, N), f'Shape of 2 x N projection matrix is {P_FR_V_M_T.shape}, and should be {(2, N)}'
+
+# Get a fresh version of X
+X = data['X']
+
+# Subset X on -800 ms to -150 ms
+mask = (times >= -800) & (times <= -150)
+X = X[:, :, mask]
+T = X.shape[2]  # Now only 66 time bins for this reduced interval
+
+assert X.shape == (N, C, T), 'Shape of X is wrong.'  # Ensure T redefined correctly
+
+print(P_FR_V_M_T.shape, X.shape)
+
+# TODO: Project X with P_FR_V_M_T

@@ -25,7 +25,7 @@ def compute_FP_proj(eigenvalues, eigenvectors, M, Z, idx: int):
 
     P_proj = np.tensordot(P, Z, axes=([1], [0]))
 
-    return P_proj
+    return P, P_proj
 
 def plot_2D_trajectories(Xs, Ys, C, reduce_time=0):
     fig, ax = plt.subplots(figsize=(10, 4))  # Initialize figures and axes
