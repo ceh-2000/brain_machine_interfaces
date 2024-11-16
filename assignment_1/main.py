@@ -260,30 +260,12 @@ assert np.allclose(eigenvalues[0::2], np.conj(eigenvalues[1::2])), 'Adjacent eig
 ####################################################################################################
 # Project Z in plane with fastest rotation (P_FR) (5b)
 
-index_max = np.argmax(eigenvalues)
-max_eigenvector = eigenvectors[index_max, :]
-
-# Extract real and imaginary parts
-real_part = np.real(max_eigenvector)
-imag_part = np.imag(max_eigenvector)
-
-real_norm_factor = np.linalg.norm(real_part)
-imag_norm_factor = np.linalg.norm(imag_part)
-
-real_norm = real_part/real_norm_factor
-imag_norm = imag_part/imag_norm_factor
-
-# Stack them into a 2 by M matrix
-P = np.vstack((real_norm, imag_norm))
-
-assert P.shape == (2, M), 'Matrix P is the wrong shape.'
-
-FP_proj = np.tensordot(P, Z, axes=([1], [0]))
+FR_P_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 0)
 
 ####################################################################################################
 # Plot 2D trajectories in fastest plane (5c)
 
-fig, ax = utils.plot_2D_trajectories(FP_proj[0], FP_proj[1], C, 10)
+fig, ax = utils.plot_2D_trajectories(FR_P_project[0], FR_P_project[1], C, 10)
 
 plt.title('Plot of trajectories projected into fasted 2D plane')
 ax.set_xlabel('P_FR_1')
@@ -295,7 +277,9 @@ plt.savefig(f'outputs/traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=30
 # Plot 2D trajectories in second and third fastest planes (5d)
 
 # Second fastest
-fig, ax = utils.plot_2D_trajectories(FP_proj[0], FP_proj[1], C, 10)
+P_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 1)
+
+fig, ax = utils.plot_2D_trajectories(P_project[0], P_project[1], C, 10)
 
 plt.title('Plot of trajectories projected into second fastest 2D plane')
 ax.set_xlabel('P_1')
@@ -304,7 +288,9 @@ ax.set_ylabel('P_2')
 plt.savefig(f'outputs/traj_projected_second_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 # Third fastest
-fig, ax = utils.plot_2D_trajectories(FP_proj[0], FP_proj[1], C, 10)
+P_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 2)
+
+fig, ax = utils.plot_2D_trajectories(P_project[0], P_project[1], C, 10)
 
 plt.title('Plot of trajectories projected into third fastest 2D plane')
 ax.set_xlabel('P_1')
