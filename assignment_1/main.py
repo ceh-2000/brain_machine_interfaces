@@ -205,15 +205,11 @@ H = construct_H(M, K)
 new_A = np.tensordot(beta_test, H, axes=1)
 assert np.all(A == new_A), 'Equation 3 not satisfied.'
 
-# TODO: Start here using equation 4 to construct W!
-def construct_W(H, Z, W_shape):
-    W = np.zeros(shape=W_shape)
+def construct_W(H, Z):
+    return np.tensordot(H, Z, axes=([2], [0]))
 
-
-
-
-# Now find beta from example Z data
-def compute_beta(full_Z):
+# Now find A from example Z data
+def compute_A(full_Z):
     M, C, T = full_Z.shape
     Z_T = full_Z[:, :, :T-1]
     Z_T_1 = full_Z[:, :, 1:T]
@@ -221,5 +217,44 @@ def compute_beta(full_Z):
 
     assert delta_Z.shape == (M, C, T-1), 'Delta Z not of shape M x C x (T-1)'
 
+    # Now reshape Z_T and delta_Z as 2D arrays
+    Z_T = Z_T.reshape(M, C*(T-1))
+    delta_Z = delta_Z.reshape(M, C*(T-1))
 
-compute_beta(Z)
+    # Get the intermediate values and matrices
+    K = compute_K(M) # Number of elements above diagonal
+    H = construct_H(M, K) # Use to construct matrices A and W
+    W = construct_W(H, Z_T) # Use to compute beta in final equation
+
+    # Formula: beta = (delta_Z)(W_T)(W W_T)^-1
+    W_W_T = np.tensordot(W, W.T, axes=([2, 1], [0, 1])) # Specify which axes to contract together
+    inverse_W_W_T = np.linalg.inv(W_W_T)
+    W_T_inverse_W_W_T = np.tensordot(W.T, inverse_W_W_T, axes=([2], [0]))
+    beta = np.tensordot(delta_Z, W_T_inverse_W_W_T, axes=([1, 0], [0, 1]))
+
+    assert beta.shape == (K,), f'beta is the wrong shape. Should be a vector of size {K}'
+
+    A = np.tensordot(beta, H, axes=1)
+
+    # Check that A is antisymmetric
+    assert np.allclose(A, -A.T), 'A is not antisymmetric.'
+
+    return A
+
+A = compute_A(Z)
+print(A.shape)
+
+# Plot A
+plt.figure(figsize=(5, 5))
+plt.imshow(A, cmap='viridis')
+plt.colorbar()
+plt.title("Color plot of A")
+plt.savefig(f'outputs/color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
+
+plt.figure(figsize=(5, 5))
+plt.imshow(np.abs(A), cmap='viridis')
+plt.colorbar()
+plt.title("Absolute value color plot of A")
+plt.savefig(f'outputs/absolute_value_color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
+
+
