@@ -4,6 +4,7 @@ import seaborn as sns
 from matplotlib.collections import LineCollection
 
 import cond_color
+import utils
 
 data = np.load('data/psths.npz')
 X, times = data['X'], data['times']  # N x C x T and T x 1
@@ -89,7 +90,7 @@ X_avg_condition = X_avg_condition[:, np.newaxis, :]
 
 X = X - X_avg_condition
 
-assert np.all(np.average(X, axis=1) < 0.0001), "Average across conditions exceeds the threshold of 0.0001"
+assert np.all(np.average(X, axis=1) < 0.0001), 'Average across conditions exceeds the threshold of 0.0001.'
 
 ####################################################################################################
 # PCA (2c)
@@ -133,24 +134,7 @@ assert PC_1.shape == (C, T)
 
 # Plot each condition as its own line and the time from PC_1 vs PC_2
 # Use cond_color
-fig, ax = plt.subplots(figsize=(10, 4))  # Initialize figures and axes
-
-for c in range(0, C):
-    xs = PC_1[c, :]
-    ys = PC_2[c, :]
-    colors = cond_color.get_colors(xs, ys)
-    cond_color.plot_start(xs[0], ys[0], colors[0], markersize=200, ax=ax)
-    cond_color.plot_end(xs[-1], ys[-1], colors[-1], markersize=50, ax=ax)
-
-    # Create the segments for the line
-    segments = []
-    for i in range(len(xs) - 1):
-        segment = [(xs[i], ys[i]), (xs[i + 1], ys[i + 1])]
-        segments.append(segment)
-
-    # Create a LineCollection from the segments and assign colors
-    lc = LineCollection(segments, colors=colors, linewidth=2)
-    ax.add_collection(lc)
+fig, ax = utils.plot_2D_trajectories(PC_1, PC_2, C)
 
 plt.title('Plot of trajectories in PC1-PC2 plane')
 ax.set_xlabel('PC1')
@@ -162,7 +146,7 @@ plt.savefig(f'outputs/pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='
 # Computing log-likelihood of a linear model (4a, 4b, 4c)
 
 # Computing A in terms of beta and H
-M = 4
+test_M = 4
 A = np.array([
     [0, 2, 3, 4],
     [-2, 0, 7, 8],
@@ -174,7 +158,7 @@ A = np.array([
 def compute_K(M):
     return int((M - 1) * (M) / 2)
 
-K = compute_K(M)
+test_K = compute_K(test_M)
 
 def construct_H(M, K):
     H = np.zeros(shape=(K, M, M))
@@ -198,7 +182,7 @@ def construct_H(M, K):
 # Test our new function
 beta_test = np.array([2, 3, 4, 7, 8, 12], dtype=np.float64)
 
-H = construct_H(M, K)
+H = construct_H(test_M, test_K)
 new_A = np.tensordot(beta_test, H, axes=1)
 assert np.all(A == new_A), 'Equation 3 not satisfied.'
 
@@ -248,20 +232,83 @@ print(A.shape)
 plt.figure(figsize=(5, 5))
 plt.imshow(A, cmap='viridis')
 plt.colorbar()
-plt.title("Color plot of A")
+plt.title('Color plot of A')
 plt.savefig(f'outputs/color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 plt.figure(figsize=(5, 5))
 plt.imshow(np.abs(A), cmap='viridis')
 plt.colorbar()
-plt.title("Absolute value color plot of A")
+plt.title('Absolute value color plot of A')
 plt.savefig(f'outputs/absolute_value_color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
 # Test A calculation (4e)
+
 test_data = np.load('data/test.npz')
 Z_test, A_test = test_data['Z_test'], test_data['A_test']
 
 A_estimate = compute_A(Z_test)
 assert np.allclose(A_estimate, A_test), 'Our estimate of A and A_test do not match.'
+
+####################################################################################################
+# Find complex eigenvectors and imaginary eigenvalues of A (5a)
+
+eigenvalues, eigenvectors = np.linalg.eig(A)
+
+assert np.allclose(eigenvalues[0::2], np.conj(eigenvalues[1::2])), 'Adjacent eigenvalues are not complex conjugates of each other.'
+
+####################################################################################################
+# Project Z in plane with fastest rotation (P_FR) (5b)
+
+index_max = np.argmax(eigenvalues)
+max_eigenvector = eigenvectors[index_max, :]
+
+# Extract real and imaginary parts
+real_part = np.real(max_eigenvector)
+imag_part = np.imag(max_eigenvector)
+
+real_norm_factor = np.linalg.norm(real_part)
+imag_norm_factor = np.linalg.norm(imag_part)
+
+real_norm = real_part/real_norm_factor
+imag_norm = imag_part/imag_norm_factor
+
+# Stack them into a 2 by M matrix
+P = np.vstack((real_norm, imag_norm))
+
+assert P.shape == (2, M), 'Matrix P is the wrong shape.'
+
+FP_proj = np.tensordot(P, Z, axes=([1], [0]))
+
+####################################################################################################
+# Plot 2D trajectories in fastest plane (5c)
+
+fig, ax = utils.plot_2D_trajectories(FP_proj[0], FP_proj[1], C, 10)
+
+plt.title('Plot of trajectories projected into fasted 2D plane')
+ax.set_xlabel('P_FR_1')
+ax.set_ylabel('P_FR_2')
+
+plt.savefig(f'outputs/traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
+
+####################################################################################################
+# Plot 2D trajectories in second and third fastest planes (5d)
+
+# Second fastest
+fig, ax = utils.plot_2D_trajectories(FP_proj[0], FP_proj[1], C, 10)
+
+plt.title('Plot of trajectories projected into second fastest 2D plane')
+ax.set_xlabel('P_1')
+ax.set_ylabel('P_2')
+
+plt.savefig(f'outputs/traj_projected_second_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
+
+# Third fastest
+fig, ax = utils.plot_2D_trajectories(FP_proj[0], FP_proj[1], C, 10)
+
+plt.title('Plot of trajectories projected into third fastest 2D plane')
+ax.set_xlabel('P_1')
+ax.set_ylabel('P_2')
+
+plt.savefig(f'outputs/traj_projected_third_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
