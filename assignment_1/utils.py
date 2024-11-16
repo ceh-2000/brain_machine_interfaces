@@ -27,8 +27,9 @@ def compute_FP_proj(eigenvalues, eigenvectors, M, Z, idx: int):
 
     return P, P_proj
 
-def plot_2D_trajectories(Xs, Ys, C, reduce_time=0):
-    fig, ax = plt.subplots(figsize=(10, 4))  # Initialize figures and axes
+def plot_2D_trajectories(Xs, Ys, C, reduce_time=0, alt_colors=False, fig=None, ax=None, alpha=1.0):
+    if fig is None and ax is None:
+        fig, ax = plt.subplots(figsize=(10, 4))  # Initialize figures and axes
 
     for c in range(0, C):
         if reduce_time > 0:
@@ -38,9 +39,7 @@ def plot_2D_trajectories(Xs, Ys, C, reduce_time=0):
             xs = Xs[c, :]
             ys = Ys[c, :]
 
-        colors = cond_color.get_colors(xs, ys)
-        cond_color.plot_start(xs[0], ys[0], colors[0], markersize=200, ax=ax)
-        cond_color.plot_end(xs[-1], ys[-1], colors[-1], markersize=50, ax=ax)
+        colors = cond_color.get_colors(xs, ys, alt_colors=alt_colors)
 
         # Create the segments for the line
         segments = []
@@ -49,8 +48,12 @@ def plot_2D_trajectories(Xs, Ys, C, reduce_time=0):
             segments.append(segment)
 
         # Create a LineCollection from the segments and assign colors
-        lc = LineCollection(segments, colors=colors, linewidth=2)
+        lc = LineCollection(segments, colors=colors, linewidth=2, alpha=alpha)
         ax.add_collection(lc)
+
+        # Put start and end points on after line segments are down
+        cond_color.plot_start(xs[0], ys[0], colors[0], markersize=200, ax=ax, alpha=alpha)
+        cond_color.plot_end(xs[-1], ys[-1], colors[-1], markersize=50, ax=ax, alpha=alpha)
 
     return fig, ax
 

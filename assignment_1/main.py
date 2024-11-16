@@ -93,6 +93,8 @@ X = X - X_avg_condition
 
 assert np.all(np.average(X, axis=1) < 0.0001), 'Average across conditions exceeds the threshold of 0.0001.'
 
+mean_centered_X = X  # Temporary variable to use to get mean-centered X later in question 6
+
 ####################################################################################################
 # PCA (2c)
 
@@ -159,7 +161,9 @@ A = np.array([
 def compute_K(M):
     return int((M - 1) * (M) / 2)
 
+
 test_K = compute_K(test_M)
+
 
 def construct_H(M, K):
     H = np.zeros(shape=(K, M, M))
@@ -180,6 +184,7 @@ def construct_H(M, K):
 
     return H
 
+
 # Test our new function
 beta_test = np.array([2, 3, 4, 7, 8, 12], dtype=np.float64)
 
@@ -187,29 +192,31 @@ H = construct_H(test_M, test_K)
 new_A = np.tensordot(beta_test, H, axes=1)
 assert np.all(A == new_A), 'Equation 3 not satisfied.'
 
+
 def construct_W(H, Z):
     return np.tensordot(H, Z, axes=([2], [0]))
+
 
 # Now find A from example Z data
 def compute_A(full_Z):
     M, C, T = full_Z.shape
-    Z_T = full_Z[:, :, :T-1]
+    Z_T = full_Z[:, :, :T - 1]
     Z_T_1 = full_Z[:, :, 1:T]
     delta_Z = Z_T_1 - Z_T
 
-    assert delta_Z.shape == (M, C, T-1), 'Delta Z not of shape M x C x (T-1)'
+    assert delta_Z.shape == (M, C, T - 1), 'Delta Z not of shape M x C x (T-1)'
 
     # Now reshape Z_T and delta_Z as 2D arrays
-    Z_T = Z_T.reshape(M, C*(T-1))
-    delta_Z = delta_Z.reshape(M, C*(T-1))
+    Z_T = Z_T.reshape(M, C * (T - 1))
+    delta_Z = delta_Z.reshape(M, C * (T - 1))
 
     # Get the intermediate values and matrices
-    K = compute_K(M) # Number of elements above diagonal
-    H = construct_H(M, K) # Use to construct matrices A and W
-    W = construct_W(H, Z_T) # Use to compute beta in final equation
+    K = compute_K(M)  # Number of elements above diagonal
+    H = construct_H(M, K)  # Use to construct matrices A and W
+    W = construct_W(H, Z_T)  # Use to compute beta in final equation
 
     # Formula: beta = (delta_Z)(W_T)(W W_T)^-1
-    W_W_T = np.tensordot(W, W.T, axes=([2, 1], [0, 1])) # Specify which axes to contract together
+    W_W_T = np.tensordot(W, W.T, axes=([2, 1], [0, 1]))  # Specify which axes to contract together
     inverse_W_W_T = np.linalg.inv(W_W_T)
     W_T_inverse_W_W_T = np.tensordot(W.T, inverse_W_W_T, axes=([2], [0]))
     beta = np.tensordot(delta_Z, W_T_inverse_W_W_T, axes=([1, 0], [0, 1]))
@@ -222,6 +229,7 @@ def compute_A(full_Z):
     assert np.allclose(A, -A.T), 'A is not antisymmetric.'
 
     return A
+
 
 A = compute_A(Z)
 
@@ -255,7 +263,8 @@ assert np.allclose(A_estimate, A_test), 'Our estimate of A and A_test do not mat
 
 eigenvalues, eigenvectors = np.linalg.eig(A)
 
-assert np.allclose(eigenvalues[0::2], np.conj(eigenvalues[1::2])), 'Adjacent eigenvalues are not complex conjugates of each other.'
+assert np.allclose(eigenvalues[0::2],
+                   np.conj(eigenvalues[1::2])), 'Adjacent eigenvalues are not complex conjugates of each other.'
 
 ####################################################################################################
 # Project Z in plane with fastest rotation (P_FR) (5b)
@@ -305,8 +314,8 @@ P_FR_V_M_T = np.matmul(P_FR, V_M.T)
 
 assert P_FR_V_M_T.shape == (2, N), f'Shape of 2 x N projection matrix is {P_FR_V_M_T.shape}, and should be {(2, N)}'
 
-# Get a fresh version of X
-X = data['X']
+# Get a fresh version of mean-centered X
+X = mean_centered_X
 
 # Subset X on -800 ms to -150 ms
 mask = (times >= -800) & (times <= -150)
@@ -315,6 +324,17 @@ T = X.shape[2]  # Now only 66 time bins for this reduced interval
 
 assert X.shape == (N, C, T), 'Shape of X is wrong.'  # Ensure T redefined correctly
 
-print(P_FR_V_M_T.shape, X.shape)
+projected_pre_movement = np.tensordot(P_FR_V_M_T, X, axes=([1], [0]))
 
-# TODO: Project X with P_FR_V_M_T
+# Previously plotted, so reduce alpha
+fig, ax = utils.plot_2D_trajectories(P_FR_project[0], P_FR_project[1], C, reduce_time=10, alpha=0.2)
+
+# Pre-movement projected trajectories
+fig, ax = utils.plot_2D_trajectories(projected_pre_movement[0], projected_pre_movement[1], C, alt_colors=True, fig=fig,
+                                     ax=ax)
+
+plt.title('Plot of N-dimensional projection trajectories')
+ax.set_xlabel('P_1')
+ax.set_ylabel('P_2')
+
+plt.savefig(f'outputs/pre_movement_N_dim_proj_traj.pdf', format='pdf', dpi=300, bbox_inches='tight')
