@@ -4,7 +4,7 @@ import seaborn as sns
 import utils
 
 # Assignment hyperparameters
-should_distort = False
+should_distort = 2
 np.random.seed(0)
 
 # Data for assignment provided
@@ -26,7 +26,7 @@ print(f'Average firing rate of neuron 0, in 0th time bin, for condition 0: {roun
 # Create a heat map for a few different neurons (1)
 
 num_neurons = 20
-c = 100
+c = 50
 data_subset = X[:num_neurons, :, c]
 
 # Create the heatmap
@@ -38,7 +38,7 @@ sns.heatmap(data_subset, yticklabels=range(1, num_neurons + 1),
 plt.xticks(ticks=np.arange(0, T, 10), labels=times[::10])
 plt.xlabel('Time Bins')
 plt.ylabel(f'Neurons (1-{num_neurons})')
-plt.title(f'PSTH for Condition c = {c}')
+# plt.title(f'PSTH for Condition c = {c}')
 
 plt.savefig(f'outputs/plotting_raw_psths_condition_{c}.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
@@ -53,7 +53,7 @@ sns.heatmap(data_subset, cmap='viridis', yticklabels=False, cbar=True)
 
 plt.xticks(ticks=np.arange(0, T, 10), labels=times[::10])
 plt.xlabel('Time Bins')
-plt.title('Population average firing rate')
+# plt.title('Population average firing rate')
 
 plt.savefig(f'outputs/population_average_firing_rate.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
@@ -67,7 +67,7 @@ plt.figure(figsize=(10, 3))
 sns.histplot(X_max, edgecolor='black', linewidth=0.5, color='skyblue')
 plt.xlabel('Maximum firing rate (Hz)')
 plt.ylabel('Neuron count')
-plt.title('Neurons\' maximum firing rates across time and condition')
+# plt.title('Neurons\' maximum firing rates across time and condition')
 
 plt.savefig(f'outputs/neurons_maximum_firing_rates.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
@@ -100,7 +100,9 @@ mean_centered_X = X  # Temporary variable to use to get mean-centered X later in
 ####################################################################################################
 # Control analysis via distorted data (7a)
 
-if should_distort:
+if should_distort == 1:
+    print('Invert movement-period segment.')
+
     # Get a fresh version of mean-centered X
     X = mean_centered_X
 
@@ -108,9 +110,21 @@ if should_distort:
 
     t0 = np.where(times == -150)[0][0]
 
-    X[:, random_condition_indices, t0:T] = 2 * X[:, random_condition_indices, t0:(t0 + 1)] - X[:,
-                                                                                             random_condition_indices,
-                                                                                             t0:T]
+    X[:, random_condition_indices, t0:T] = 2 * X[:, random_condition_indices, t0:(t0 + 1)] - X[:,random_condition_indices,t0:T]
+elif should_distort == 2:
+    # Shuffle the time bins
+    print('Shuffle the time bins.')
+
+    # Axis to shuffle is the time axis
+    axis = 2
+
+    # Generate shuffled indices along the specified axis
+    indices = np.arange(X.shape[2])
+    np.random.shuffle(indices)
+
+    # Take the shuffled indices along the given axis
+    # TODO: Fix from here!!!!
+    X = np.take_along_axis(X, np.expand_dims(indices, axis=0).repeat(X.shape[0], axis=0), axis=axis)
 
 ####################################################################################################
 # PCA (2c)
@@ -156,9 +170,9 @@ assert PC_1.shape == (C, T)
 # Use cond_color
 fig, ax = utils.plot_2D_trajectories(PC_1, PC_2, C)
 
-plt.title('Plot of trajectories in PC1-PC2 plane')
-ax.set_xlabel('PC1')
-ax.set_ylabel('PC2')
+# plt.title('Plot of trajectories in PC1-PC2 plane')
+ax.set_xlabel(r'PC$_1$')
+ax.set_ylabel(r'PC$_2$')
 
 plt.savefig(f'outputs/pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
@@ -257,13 +271,13 @@ A = compute_A(Z)
 plt.figure(figsize=(5, 5))
 plt.imshow(A, cmap='viridis')
 plt.colorbar()
-plt.title('Color plot of A')
+# plt.title('Color plot of A')
 plt.savefig(f'outputs/color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 plt.figure(figsize=(5, 5))
 plt.imshow(np.abs(A), cmap='viridis')
 plt.colorbar()
-plt.title('Absolute value color plot of A')
+# plt.title('Absolute value color plot of A')
 plt.savefig(f'outputs/absolute_value_color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
@@ -293,16 +307,16 @@ P_FR, P_FR_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 0)
 
 fig, ax = utils.plot_2D_trajectories(P_FR_project[0], P_FR_project[1], C, 10)
 
-if should_distort:
-    plt.title('Plot of trajectories projected into fastest 2D plane, distorted data')
-else:
-    plt.title('Plot of trajectories projected into fastest 2D plane')
-ax.set_xlabel('P_FR_1')
-ax.set_ylabel('P_FR_2')
+# if should_distort == 1:
+#     plt.title('Plot of trajectories projected into fastest 2D plane, distorted data')
+# elif should_distort == 0:
+#     plt.title('Plot of trajectories projected into fastest 2D plane')
+ax.set_xlabel(r'P_FR$_1$')
+ax.set_ylabel(r'P_FR$_2$')
 
-if should_distort:
+if should_distort == 1:
     plt.savefig(f'outputs/DISTORTED_traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
-else:
+elif should_distort == 0:
     plt.savefig(f'outputs/traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
@@ -313,9 +327,9 @@ _, P_project_2nd = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 1)
 
 fig, ax = utils.plot_2D_trajectories(P_project_2nd[0], P_project_2nd[1], C, 10)
 
-plt.title('Plot of trajectories projected into second fastest 2D plane')
-ax.set_xlabel('P_1')
-ax.set_ylabel('P_2')
+# plt.title('Plot of trajectories projected into second fastest 2D plane')
+ax.set_xlabel(r'P$_1$')
+ax.set_ylabel(r'P$_2$')
 
 plt.savefig(f'outputs/traj_projected_second_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
@@ -324,9 +338,9 @@ _, P_project_3rd = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 2)
 
 fig, ax = utils.plot_2D_trajectories(P_project_3rd[0], P_project_3rd[1], C, 10)
 
-plt.title('Plot of trajectories projected into third fastest 2D plane')
-ax.set_xlabel('P_1')
-ax.set_ylabel('P_2')
+# plt.title('Plot of trajectories projected into third fastest 2D plane')
+ax.set_xlabel(r'P$_1$')
+ax.set_ylabel(r'P$_2$')
 
 plt.savefig(f'outputs/traj_projected_third_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
@@ -356,9 +370,9 @@ fig, ax = utils.plot_2D_trajectories(P_FR_project[0], P_FR_project[1], C, reduce
 fig, ax = utils.plot_2D_trajectories(projected_pre_movement[0], projected_pre_movement[1], C, alt_colors=True, fig=fig,
                                      ax=ax)
 
-plt.title('Plot of N-dimensional projection trajectories')
-ax.set_xlabel('P_1')
-ax.set_ylabel('P_2')
+# plt.title('Plot of N-dimensional projection trajectories')
+ax.set_xlabel(r'P$_1$')
+ax.set_ylabel(r'P$_2$')
 
 plt.savefig(f'outputs/pre_movement_N_dim_proj_traj.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
