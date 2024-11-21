@@ -4,7 +4,7 @@ import seaborn as sns
 import utils
 
 # Assignment hyperparameters
-should_distort = 2
+should_distort = 0
 should_title = False # No titles for report
 np.random.seed(0)
 
@@ -27,7 +27,7 @@ print(f'Average firing rate of neuron 0, in 0th time bin, for condition 0: {roun
 # Create a heat map for a few different neurons (1)
 
 num_neurons = 20
-c = 50
+c = 100
 data_subset = X[:num_neurons, :, c]
 
 # Create the heatmap
