@@ -4,7 +4,7 @@ import seaborn as sns
 import utils
 
 # Assignment hyperparameters
-should_distort = 0
+should_distort = 2
 should_title = False # No titles for report
 np.random.seed(0)
 
@@ -320,7 +320,7 @@ P_FR, P_FR_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 0)
 fig, ax = utils.plot_2D_trajectories(P_FR_project[0], P_FR_project[1], C, 10)
 
 if should_distort == 1 and should_title:
-    plt.title('Plot of trajectories projected into fastest 2D plane, distorted data')
+    plt.title('Plot of trajectories projected into fastest 2D plane, inversion distorted data')
 elif should_distort == 0 and should_title:
     plt.title('Plot of trajectories projected into fastest 2D plane')
 ax.set_xlabel(r'P_FR$_1$')
