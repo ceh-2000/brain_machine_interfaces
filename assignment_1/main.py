@@ -5,6 +5,7 @@ import utils
 
 # Assignment hyperparameters
 should_distort = 2
+should_title = False # No titles for report
 np.random.seed(0)
 
 # Data for assignment provided
@@ -38,9 +39,12 @@ sns.heatmap(data_subset, yticklabels=range(1, num_neurons + 1),
 plt.xticks(ticks=np.arange(0, T, 10), labels=times[::10])
 plt.xlabel('Time Bins')
 plt.ylabel(f'Neurons (1-{num_neurons})')
-# plt.title(f'PSTH for Condition c = {c}')
 
-plt.savefig(f'outputs/plotting_raw_psths_condition_{c}.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_title:
+    plt.title(f'PSTH for Condition c = {c}')
+
+if should_distort == 0:
+    plt.savefig(f'outputs/plotting_raw_psths_condition_{c}.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
 # Population average across neuron and condition (1)
@@ -53,9 +57,11 @@ sns.heatmap(data_subset, cmap='viridis', yticklabels=False, cbar=True)
 
 plt.xticks(ticks=np.arange(0, T, 10), labels=times[::10])
 plt.xlabel('Time Bins')
-# plt.title('Population average firing rate')
+if should_title:
+    plt.title('Population average firing rate')
 
-plt.savefig(f'outputs/population_average_firing_rate.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_distort == 0:
+    plt.savefig(f'outputs/population_average_firing_rate.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
 # Plotting maximum firing rates of neurons across time and conditions (2a)
@@ -67,9 +73,11 @@ plt.figure(figsize=(10, 3))
 sns.histplot(X_max, edgecolor='black', linewidth=0.5, color='skyblue')
 plt.xlabel('Maximum firing rate (Hz)')
 plt.ylabel('Neuron count')
-# plt.title('Neurons\' maximum firing rates across time and condition')
+if should_title:
+    plt.title('Neurons\' maximum firing rates across time and condition')
 
-plt.savefig(f'outputs/neurons_maximum_firing_rates.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_distort == 0:
+    plt.savefig(f'outputs/neurons_maximum_firing_rates.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 # Question is "why normalize?" We don't want certain principal components to be selected simply because their
 # variances are on a different scale and thus appear to explain more of the data. If their variances are scaled to one,
@@ -117,14 +125,9 @@ elif should_distort == 2:
 
     # Axis to shuffle is the time axis
     axis = 2
-
-    # Generate shuffled indices along the specified axis
-    indices = np.arange(X.shape[2])
-    np.random.shuffle(indices)
-
-    # Take the shuffled indices along the given axis
-    # TODO: Fix from here!!!!
-    X = np.take_along_axis(X, np.expand_dims(indices, axis=0).repeat(X.shape[0], axis=0), axis=axis)
+    X = mean_centered_X
+    idx = np.random.rand(*X.shape).argsort(axis=axis)
+    X = np.take_along_axis(X, idx, axis=axis)
 
 ####################################################################################################
 # PCA (2c)
@@ -170,11 +173,15 @@ assert PC_1.shape == (C, T)
 # Use cond_color
 fig, ax = utils.plot_2D_trajectories(PC_1, PC_2, C)
 
-# plt.title('Plot of trajectories in PC1-PC2 plane')
+if should_title:
+    plt.title('Plot of trajectories in PC1-PC2 plane')
 ax.set_xlabel(r'PC$_1$')
 ax.set_ylabel(r'PC$_2$')
 
-plt.savefig(f'outputs/pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_distort == 2:
+    plt.savefig(f'outputs/TIME_DISTORT_pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='tight')
+elif should_distort == 0:
+    plt.savefig(f'outputs/pca_dim_1_dim_2.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
 # Computing log-likelihood of a linear model (4a, 4b, 4c)
@@ -243,6 +250,7 @@ def compute_A(full_Z):
 
     # Get the intermediate values and matrices
     K = compute_K(M)  # Number of elements above diagonal
+    print(f'M: {M}, K: {K}')
     H = construct_H(M, K)  # Use to construct matrices A and W
     W = construct_W(H, Z_T)  # Use to compute beta in final equation
 
@@ -271,14 +279,18 @@ A = compute_A(Z)
 plt.figure(figsize=(5, 5))
 plt.imshow(A, cmap='viridis')
 plt.colorbar()
-# plt.title('Color plot of A')
-plt.savefig(f'outputs/color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_title:
+    plt.title('Color plot of A')
+if should_distort == 0:
+    plt.savefig(f'outputs/color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 plt.figure(figsize=(5, 5))
 plt.imshow(np.abs(A), cmap='viridis')
 plt.colorbar()
-# plt.title('Absolute value color plot of A')
-plt.savefig(f'outputs/absolute_value_color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_title:
+    plt.title('Absolute value color plot of A')
+if should_distort == 0:
+    plt.savefig(f'outputs/absolute_value_color_plot_of_A.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
 # Test A calculation (4e)
@@ -307,15 +319,18 @@ P_FR, P_FR_project = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 0)
 
 fig, ax = utils.plot_2D_trajectories(P_FR_project[0], P_FR_project[1], C, 10)
 
-# if should_distort == 1:
-#     plt.title('Plot of trajectories projected into fastest 2D plane, distorted data')
-# elif should_distort == 0:
-#     plt.title('Plot of trajectories projected into fastest 2D plane')
+if should_distort == 1 and should_title:
+    plt.title('Plot of trajectories projected into fastest 2D plane, distorted data')
+elif should_distort == 0 and should_title:
+    plt.title('Plot of trajectories projected into fastest 2D plane')
 ax.set_xlabel(r'P_FR$_1$')
 ax.set_ylabel(r'P_FR$_2$')
 
-if should_distort == 1:
-    plt.savefig(f'outputs/DISTORTED_traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
+
+if should_distort == 2:
+    plt.savefig(f'outputs/TIME_DISTORTED_traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
+elif should_distort == 1:
+    plt.savefig(f'outputs/INVERT_DISTORTED_traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 elif should_distort == 0:
     plt.savefig(f'outputs/traj_projected_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
@@ -327,22 +342,26 @@ _, P_project_2nd = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 1)
 
 fig, ax = utils.plot_2D_trajectories(P_project_2nd[0], P_project_2nd[1], C, 10)
 
-# plt.title('Plot of trajectories projected into second fastest 2D plane')
+if should_title:
+    plt.title('Plot of trajectories projected into second fastest 2D plane')
 ax.set_xlabel(r'P$_1$')
 ax.set_ylabel(r'P$_2$')
 
-plt.savefig(f'outputs/traj_projected_second_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_distort == 0:
+    plt.savefig(f'outputs/traj_projected_second_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 # Third fastest
 _, P_project_3rd = utils.compute_FP_proj(eigenvalues, eigenvectors, M, Z, 2)
 
 fig, ax = utils.plot_2D_trajectories(P_project_3rd[0], P_project_3rd[1], C, 10)
 
-# plt.title('Plot of trajectories projected into third fastest 2D plane')
+if should_title:
+    plt.title('Plot of trajectories projected into third fastest 2D plane')
 ax.set_xlabel(r'P$_1$')
 ax.set_ylabel(r'P$_2$')
 
-plt.savefig(f'outputs/traj_projected_third_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_distort == 0:
+    plt.savefig(f'outputs/traj_projected_third_fastest_2D_plane.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
 # Apply the projections obtained for the interval [-150ms, 300ms] to the interval [-800ms, -150ms] (6)
@@ -370,11 +389,13 @@ fig, ax = utils.plot_2D_trajectories(P_FR_project[0], P_FR_project[1], C, reduce
 fig, ax = utils.plot_2D_trajectories(projected_pre_movement[0], projected_pre_movement[1], C, alt_colors=True, fig=fig,
                                      ax=ax)
 
-# plt.title('Plot of N-dimensional projection trajectories')
+if should_title:
+    plt.title('Plot of N-dimensional projection trajectories')
 ax.set_xlabel(r'P$_1$')
 ax.set_ylabel(r'P$_2$')
 
-plt.savefig(f'outputs/pre_movement_N_dim_proj_traj.pdf', format='pdf', dpi=300, bbox_inches='tight')
+if should_distort == 0:
+    plt.savefig(f'outputs/pre_movement_N_dim_proj_traj.pdf', format='pdf', dpi=300, bbox_inches='tight')
 
 ####################################################################################################
 # Control analysis via distorted data (7a)
