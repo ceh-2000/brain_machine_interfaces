@@ -1,10 +1,10 @@
-## Assignment 2
+# Assignment 2
 
-### Prerequisites
+## Prerequisites
 1. Python 3.12+
 2. pip
 
-### Setup
+## Setup
 1. Create a new virtual environment in the directory `assignment_2` using Python 3.12+ and:
 ```
 python -m venv venv
